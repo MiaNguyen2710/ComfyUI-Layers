@@ -57,10 +57,10 @@ class PSDLayerCreator:
         psd = pytoshop.core.PsdFile(num_channels=4, height=input_image.shape[0], width=input_image.shape[1])
         
         if original_image:
-            # Save the original image as the first layer (optional layer name)
+            # Save the original image as the first layer (NO COLOR CONVERSION)
             original_image_uint8 = (input_image.cpu().detach().numpy() * 255).astype(np.uint8)
         
-            original_layer_data = [layers.ChannelImageData(image=original_image_uint8[:, :, channel], compression=1) for channel in range(input_image.shape[2])]
+            original_layer_data = [layers.ChannelImageData(image=original_image_uint8[:, :, channel], compression=0) for channel in range(input_image.shape[2])]
             original_layer_record = layers.LayerRecord(
                 channels={-1: original_layer_data[3], 0: original_layer_data[0], 1: original_layer_data[1], 2: original_layer_data[2]},
                 top=0, bottom=input_image.shape[0], left=0, right=input_image.shape[1],
@@ -69,7 +69,6 @@ class PSDLayerCreator:
                 opacity=255,
             )
             psd.layer_and_mask_info.layer_info.layer_records.append(original_layer_record)
-
 
         all_masked_images = []
         # Create and add masked image layers
@@ -86,17 +85,17 @@ class PSDLayerCreator:
             
             all_masked_images.append(masked_image)
 
-            # Convert masked image to numpy array (assuming CPU tensor)
+            # Convert masked image to numpy array (NO COLOR CONVERSION)
             masked_image_numpy = masked_image.cpu().detach().numpy()
             
-            # Convert masked image to a suitable unsigned integer format (e.g., uint8)
+            # Convert to uint8 format
             masked_image_uint8 = (masked_image_numpy * 255).astype(np.uint8)
 
             # Create layer data objects from masked image channels (adjust based on mask count)
             layer_data = []
             for channel in range(input_image.shape[2]):
                 layer_data.append(
-                    layers.ChannelImageData(image=masked_image_uint8[:, :, channel], compression=1)
+                    layers.ChannelImageData(image=masked_image_uint8[:, :, channel], compression=0)
                 )
                 
             # Create a new layer record with the layer data
@@ -109,8 +108,6 @@ class PSDLayerCreator:
             )
             psd.layer_and_mask_info.layer_info.layer_records.append(new_layer_record)
 
-
-            
         # Save the PSD file at the specified output path
         try:
             with open(f"{output_path}", 'wb') as fd2:
@@ -155,7 +152,6 @@ class PSDLayerCreatorFromImagesOnly:
             # Concatenate channels to create RGBA image
             input_image = torch.cat((input_image, alpha_channel), dim=3)
         
-        
         # check if output_path contains the name of the file
         if not output_path.endswith(".psd"):
             # Generate random name using current time
@@ -173,14 +169,14 @@ class PSDLayerCreatorFromImagesOnly:
             
             image = input_image[i]  # Select the i-th image
 
-            # Convert image to numpy array
+            # Convert image to numpy array (NO COLOR CONVERSION)
             image_numpy = image.cpu().detach().numpy()
             
-            # Convert image to uint8 format
+            # Convert to uint8 format
             image_uint8 = (image_numpy * 255).astype(np.uint8)
 
             # Create layer data objects from image channels
-            layer_data = [layers.ChannelImageData(image=image_uint8[:, :, channel], compression=1) for channel in range(image.shape[2])]
+            layer_data = [layers.ChannelImageData(image=image_uint8[:, :, channel], compression=0) for channel in range(image.shape[2])]
                     
             # Create a new layer record with the layer data
             new_layer_record = layers.LayerRecord(
@@ -192,12 +188,11 @@ class PSDLayerCreatorFromImagesOnly:
             )
             psd.layer_and_mask_info.layer_info.layer_records.append(new_layer_record)
         
-        
         # Save the PSD file at the specified output path
         try:
             with open(f"{output_path}", 'wb') as fd2:
                 psd.write(fd2)
-            print(f"Masked images saved as PSD with separate layers: {output_path}")
+            print(f"Images saved as PSD with separate layers: {output_path}")
         except Exception as e:
             print(f"Error saving PSD: {e}")
         return (input_image,)
@@ -208,6 +203,6 @@ NODE_CLASS_MAPPINGS = {
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "LayerDividerDivideLayer": "LayersSaver - Save Layer",
-    "PSDLayerCreatorFromImagesOnly": "LayersSaver - Save Layer From Images"
+    "LayersSaver - Save Layer": "LayersSaver - Save Layer",
+    "LayersSaver - Save Layer From Images": "LayersSaver - Save Layer From Images"
 }
